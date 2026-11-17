@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Pro Caro v4.9 - Local Account</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-color: #f8fafc;
+            --text-secondary: #94a3b8;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .user-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-color);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.85rem;
+            background: #1e293b;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            font-size: 0.95rem;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-logout {
+            background-color: var(--danger-color);
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            width: auto;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            gap: 2px;
+            background: #334155;
+            padding: 4px;
+            border-radius: 6px;
+            aspect-ratio: 1;
+            width: 100%;
+        }
+
+        .cell {
+            background: #1e293b;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .cell:hover {
+            background: #334155;
+        }
+
+        .cell.x {
+            color: #60a5fa;
+        }
+
+        .cell.o {
+            color: #f87171;
+        }
+
+        .status-text {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+
+    <!-- Firebase App & Realtime Database SDK (Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Caro Pro v4.9</h1>
+            <span id="player-tag" style="font-size: 0.85rem; color: var(--text-secondary);">Chưa đăng nhập</span>
+        </header>
+
+        <!-- Khu vực đăng nhập bằng Tên Người Chơi -->
+        <div id="login-section" class="user-panel">
+            <p style="font-size: 0.85rem; color: var(--text-secondary); text-align: center;">Nhập tên của đại ca để lưu tiến trình Kim cương và Cấp độ lên Database.</p>
+            <div class="input-group">
+                <input type="text" id="username-input" placeholder="Nhập tên nhân vật..." autocomplete="off">
+                <button class="btn" id="login-btn" style="width: auto;">Vào Game</button>
+            </div>
+        </div>
+
+        <!-- Khu vực thông tin tài khoản nội bộ -->
+        <div id="user-profile-section" class="user-panel hidden">
+            <div class="user-info">
+                <h3 id="display-name" style="color: var(--accent-color);">Tên: <span></span></h3>
+                <button class="btn btn-logout" id="logout-btn">Đổi Tên</button>
+            </div>
+            <div class="stats-row">
+                <span>💎 Kim cương: <b id="stat-gems">0</b></span>
+                <span>⚡ Năng lượng: <b id="stat-energy">100</b></span>
+                <span>⭐ Level: <b id="stat-level">1</b></span>
+            </div>
+        </div>
+
+        <!-- Trạng thái game -->
+        <div class="status-text" id="game-status">Lượt đi: Người chơi (X)</div>
+
+        <!-- Bàn cờ Caro 15x15 -->
+        <div class="game-board" id="board"></div>
+
+        <button class="btn" id="reset-btn">Chơi Ván Mới</button>
+    </div>
+
+    <script>
+        // Cấu hình Firebase mới nhất của đại ca
+        const firebaseConfig = {
+            apiKey: "AIzaSyArpMYGnL46wvNyMbcyHH2VeaMiL1pQgK4",
+            authDomain: "caro-henry.firebaseapp.com",
+            projectId: "caro-henry",
+            storageBucket: "caro-henry.firebasestorage.app",
+            messagingSenderId: "438339133677",
+            appId: "1:438339133677:web:f271239aae11f527582ce4",
+            measurementId: "G-1SBG7RBC0S"
+        };
+
+        // Khởi tạo Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentUserId = localStorage.getItem('caro_user_id') || null;
+        let currentUserName = localStorage.getItem('caro_user_name') || null;
+
+        const BOARD_SIZE = 15;
+        let board = Array(BOARD_SIZE * BOARD_SIZE).fill('');
+        let currentPlayer = 'X';
+        let gameActive = true;
+
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('game-status');
+        const loginSection = document.getElementById('login-section');
+        const profileSection = document.getElementById('user-profile-section');
+        const usernameInput = document.getElementById('username-input');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // Kiểm tra nếu đã lưu thông tin đăng nhập trước đó
+        if (currentUserId && currentUserName) {
+            activateUserSession(currentUserId, currentUserName);
+        }
+
+        loginBtn.addEventListener('click', () => {
+            let name = usernameInput.value.trim();
+            if (!name) {
+                alert("Đại ca vui lòng nhập tên nhân vật!");
+                return;
+            }
+            // Tạo mã ID độc nhất từ tên người chơi (chuẩn hóa không dấu/khoảng trắng)
+            let userId = 'user_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            
+            localStorage.setItem('caro_user_id', userId);
+            localStorage.setItem('caro_user_name', name);
+
+            activateUserSession(userId, name);
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('caro_user_id');
+            localStorage.removeItem('caro_user_name');
+            location.reload();
+        });
+
+        function activateUserSession(userId, name) {
+            loginSection.classList.add('hidden');
+            profileSection.classList.remove('hidden');
+            document.querySelector('#display-name span').innerText = name;
+            document.getElementById('player-tag').innerText = "Đã kết nối: " + name;
+
+            // Kết nối Realtime Database để đồng bộ thông số
+            const userRef = database.ref('players/' + userId);
+            userRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    document.getElementById('stat-gems').innerText = data.gems || 50;
+                    document.getElementById('stat-energy').innerText = data.energy || 100;
+                    document.getElementById('stat-level').innerText = data.level || 1;
+                } else {
+                    // Khởi tạo mặc định nếu tài khoản mới tinh
+                    userRef.set({
+                        name: name,
+                        gems: 50,
+                        energy: 100,
+                        level: 1
+                    });
+                }
+            });
+        }
+
+        // Khởi tạo bàn cờ Caro
+        function initBoard() {
+            boardElement.innerHTML = '';
+            board = Array(BOARD_SIZE * BOARD_SIZE).fill('');
+            gameActive = true;
+            currentPlayer = 'X';
+            statusElement.innerText = "Lượt đi: Bạn (X)";
+
+            for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', handleCellClick);
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(e) {
+            const index = e.target.dataset.index;
+            if (board[index] !== '' || !gameActive || currentPlayer !== 'X') return;
+
+            makeMove(index, 'X');
+            if (checkWin('X')) {
+                statusElement.innerText = "🎉 Bạn đã chiến thắng!";
+                gameActive = false;
+                addRewards(20); // Thưởng kim cương khi thắng
+                return;
+            }
+
+            if (board.every(cell => cell !== '')) {
+                statusElement.innerText = "🤝 Ván đấu hòa!";
+                gameActive = false;
+                return;
+            }
+
+            currentPlayer = 'O';
+            statusElement.innerText = "Lượt đi: Máy (O)...";
+            setTimeout(makeAIMove, 400);
+        }
+
+        function makeMove(index, player) {
+            board[index] = player;
+            const cell = boardElement.children[index];
+            cell.innerText = player;
+            cell.classList.add(player.toLowerCase());
+        }
+
+        function makeAIMove() {
+            if (!gameActive) return;
+            let emptyCells = board.map((val, idx) => val === '' ? idx : null).filter(val => val !== null);
+            if (emptyCells.length === 0) return;
+
+            let randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+            makeMove(randomIndex, 'O');
+
+            if (checkWin('O')) {
+                statusElement.innerText = "🤖 Máy đã thắng!";
+                gameActive = false;
+                return;
+            }
+
+            currentPlayer = 'X';
+            statusElement.innerText = "Lượt đi: Bạn (X)";
+        }
+
+        function checkWin(player) {
+            const winLength = 5;
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    if (checkDirection(r, c, 1, 0, player, winLength) || 
+                        checkDirection(r, c, 0, 1, player, winLength) || 
+                        checkDirection(r, c, 1, 1, player, winLength) || 
+                        checkDirection(r, c, 1, -1, player, winLength)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkDirection(row, col, dr, dc, player, len) {
+            for (let i = 0; i < len; i++) {
+                let nr = row + dr * i;
+                let nc = col + dc * i;
+                if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) return false;
+                if (board[nr * BOARD_SIZE + nc] !== player) return false;
+            }
+            return true;
+        }
+
+        function addRewards(bonusGems) {
+            let userId = localStorage.getItem('caro_user_id');
+            if (userId) {
+                const userRef = database.ref('players/' + userId);
+                userRef.once('value').then((snapshot) => {
+                    const data = snapshot.val() || { gems: 50 };
+                    userRef.update({
+                        gems: (data.gems || 50) + bonusGems
+                    });
+                });
+            }
+        }
+
+        resetBtn.addEventListener('click', initBoard);
+        initBoard();
+    </script>
+</body>
+</html>
